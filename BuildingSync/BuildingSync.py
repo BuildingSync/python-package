@@ -1,6 +1,8 @@
 import xmltodict as xmltodict
 import collections
+import re
 from Fields import BSFields
+from JsonExport import JsonExport
 
 class BuildingSync:
   def __init__(self):
@@ -49,7 +51,8 @@ class BuildingSync:
       if resourceuse['ResourceUse']['@ID'] == resourceUseID:
         return resourceUse
     return None
- def find_emission(self, resourceUse, emissionID):
+
+  def find_emission(self, resourceUse, emissionID):
     for emission in resourceUse['Emissions']:
       if emission['Emission']['@ID'] == emissionID:
         return emission       
@@ -81,25 +84,37 @@ class BuildingSync:
     f.write(xmltodict.unparse(self.data, pretty=True))
     f.close()
 
-  def set_fields(element, elementType, kwargs):
-  
-    section = elementType.lower()
+  def export_json(self, filename):
+    ''' export to birds JSON format '''
+    results = JsonExport.export(self.data, filename)
+
+  def convert_to_underscores(self, name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+  def set_fields(self, element, elementType, **kwargs):
+    print "kwargs: "
+    print kwargs
+    section = self.convert_to_underscores(elementType)
+    print "section: " + section
 
     ''' get fields '''
-    fields = BSFields.section()
+    methodToCall = getattr(BSFields, section)
+
+    fields = methodToCall()
 
     for name, value in kwargs.items():
       for field in fields:
         if field.lower() == name.lower():
-          if elementType == None
+          if elementType == None:
             element[field] = value
-          else
+          else:
             element[elementType][field] = value  #check if elementType is defined
           break
 
     return element
 
-  def find_field(element, kwargs):
+  def find_field(self, element, **kwargs):
     for name, value in kwargs.items():
       if name.lower() == element.lower():
         return value
@@ -142,49 +157,50 @@ class BuildingSync:
     ''' User-Defined Fields can be added to many elements '''
     ''' audit, site, commercial facility, measure, report, emission, time_series, all_resource_total, scenario, lighting_system '''
     ''' in this case kwargs will have IDs in it '''
-    
+
     udf = {'UserDefinedField' : {}}
-    udf = self.set_fields(udf, 'UserDefinedFields', kwargs)
+    udf = self.set_fields(udf, 'UserDefinedField', **kwargs)
+    print udf
 
     audit = self.find_audit(auditID)
 
     if addTo == 'Audit':
       if 'UserDefinedFields' not in audit['Audit']:
-        audit['Audit']['UserDefinedFields'] = {}
+        audit['Audit']['UserDefinedFields'] = []
       audit['Audit']['UserDefinedFields'].append(udf)
     elif addTo == 'Site':
       siteID = self.find_field('siteID', kwargs)
       # TODO add error checking 
       site = self.find_site(self, audit, siteID)
       if 'UserDefinedFields' not in site['Site']:
-        site['Site']['UserDefinedFields'] = {}
+        site['Site']['UserDefinedFields'] = []
       site['Site']['UserDefinedFields'].append(udf)
     elif addTo == 'CommercialFacility':
       commercialFacilityID = self.find_field('commercialFacilityID', kwargs)
       #TODO add error checking
       commercial_facility = self.find_commercial_facility(self, site, commercialFacilityID)
       if 'UserDefinedFields' not in commercial_facility['CommercialFacility']:
-        commercial_facility['CommercialFacility']['UserDefinedFields'] = {}
+        commercial_facility['CommercialFacility']['UserDefinedFields'] = []
       commercial_facility['CommercialFacility']['UserDefinedFields'].append(udf)
     elif addTo == 'Measure':
       measureID = self.find_field('measureID', kwargs)
       #TODO add error checking
       measure = self.find_measure(audit, measureID)
       if 'UserDefinedFields' not in measure['Measure']:
-        measure['Measure']['UserDefinedFields'] = {}
+        measure['Measure']['UserDefinedFields'] = []
       measure['Measure']['UserDefinedFields'].append(udf)
     elif addTo == 'Report':
       report = audit['Report']
       if 'UserDefinedFields' not in report:
-        report['UserDefinedFields'] = {}
+        report['UserDefinedFields'] = []
       report['UserDefinedFields'].append(udf)
     elif addTo == 'Scenario':  
       scenarioID = self.find_field('scenarioID', kwargs)
       #TODO add error checking
       scenario = self.find_scenario(audit, scenarioID)
-     if 'UserDefinedFields' not in scenario['Scenario']:
-       scenario['UserDefinedFields'] = {}
-     scenario['UserDefinedFields'].append(udf)  
+      if 'UserDefinedFields' not in scenario['Scenario']:
+        scenario['UserDefinedFields'] = []
+      scenario['UserDefinedFields'].append(udf)  
    
     elif addTo == 'TimeSeries':
       scenarioID = self.find_field('scenarioID', kwargs)
@@ -193,7 +209,7 @@ class BuildingSync:
       scenario = self.find_scenario(audit, scenarioID)
       timeseries = self.find_timeseries(scenario, timeSeriesID)
       if 'UserDefinedFields' not in timeseries['TimeSeries']:
-        timeseries['UserDefinedFields'] = {}
+        timeseries['UserDefinedFields'] = []
       timeseries['UserDefinedFields'].append(udf)
         
     elif addTo == 'AllResourceTotal':
@@ -203,7 +219,7 @@ class BuildingSync:
       scenario = self.find_scenario(audit, scenarioID)
       art = self.find_allresourcetotal(scenario, allResourceTotalID)
       if 'UserDefinedFields' not in art['AllResourceTotal']:
-        art['UserDefinedFields'] = {}
+        art['UserDefinedFields'] = []
       art['UserDefinedFields'].append(udf)
     elif addTo == 'Emission':
       #find report->scenarios->resourceUses->Emissions->EmissionID
@@ -215,7 +231,7 @@ class BuildingSync:
       resourceUse = self.find_resourceuse(scenario, resourceUseID)
       emission = self.find_emission(resourceUse, emissionID)
       if 'UserDefinedFields' not in emission['Emission']:
-        emission['UserDefinedFields'] = {}
+        emission['UserDefinedFields'] = []
       emission['UserDefinedFields'].append(udf)  
 
     elif addTo == 'LightingSystem':
@@ -223,9 +239,10 @@ class BuildingSync:
       #TODO add error checking
       lightingSystem = self.find_system(audit, 'LightingSystem', lightingSystemID)
       if 'UserDefinedFields' not in lightingSystem['LightingSystem']:
-        lightingSystem['UserDefinedFields'] = {}
+        lightingSystem['UserDefinedFields'] = []
       lightingSystem['UserDefinedFields'].append(udf)
 
+    print self.data
 
   def add_measure(self, auditID, measureID, **kwargs):
 
