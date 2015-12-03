@@ -21,10 +21,15 @@ class BuildingSync:
       if site['Site']['@ID'] == siteID:
         return site
     return None
-  def find_commercial_facility(self, site, commercialFacilityID):
-    for commercial_facility in site['Site']['CommercialFacilities']:
-      if commercial_facility['CommercialFacility']['@ID'] == commercialFacilityID:
-        return commercial_facility   
+  def find_facility(self, site, facilityID):
+    for facility in site['Site']['Facilities']:
+      if facility['Facility']['@ID'] == facilityID:
+        return facility   
+    return None
+  def find_subsection(self, facility, subsectionID):
+    for subsection in facility['Facility']['Subsections']:
+      if subsection['Subsection']['@ID'] == subsectionID:
+        return subsection
     return None
   def find_measure(self, audit, measureID):
     for measure in audit['Audit']['Measures']:
@@ -106,10 +111,7 @@ class BuildingSync:
     for name, value in kwargs.items():
       for field in fields:
         if field.lower() == name.lower():
-          if elementType == None:
-            element[field] = value
-          else:
-            element[elementType][field] = value  #check if elementType is defined
+          element[field] = value
           break
 
     return element
@@ -130,36 +132,97 @@ class BuildingSync:
   def add_site(self, auditID, siteID, **kwargs):
     
     new_site = {'Site' : {'@ID' : siteID}}
-    new_site = self.set_fields(new_site, 'Site', kwargs)
+    new_site['Site'] = self.set_fields(new_site['Site'], 'Site', **kwargs)
 
     ''' find correct audit '''
     audit = self.find_audit(auditID)
+    if 'Sites' not in audit['Audit']:
+      audit['Audit']['Sites'] = []
     audit['Audit']['Sites'].append(new_site)
     print self.data['Audits']
 
-  def add_commercial_facility(self, auditID, siteID, commercialFacilityID, **kwargs):
+  def add_address(self, auditID, siteID, **kwargs):
+    address = {}
+    address = self.set_fields(address, 'Address', **kwargs)  
+    audit = self.find_audit(auditID)
+    site = self.find_site(audit, siteID)
+    site['Site']['Address'] = address
+
+  def add_facility(self, auditID, siteID, facilityID, **kwargs):
   
-    new_commercial_facility = {'CommercialFacility' : {'@ID' : commercialFacilityID}}
-    new_commercial_facility = set_fields(new_commercial_facility, 'CommercialFacility', kwargs)
+    new_facility = {'Facility' : {'@ID' : facilityID}}
+    new_facility['Facility'] = self.set_fields(new_facility['Facility'], 'Facility', **kwargs)
 
     ''' find correct audit & site '''
     audit = self.find_audit(auditID)
     site = self.find_site(audit, siteID)
 
-    if 'CommercialFacilities' not in site['Site']:
-      site['Site']['CommercialFacilities'] = {}
+    if 'Facilities' not in site['Site']:
+      site['Site']['Facilities'] = []
 
-    site['Site']['CommercialFacilities'].append(new_measure)
+    site['Site']['Facilities'].append(new_facility)
     print self.data['Audits']
 
+  def add_subsection(self, auditID, siteID, facilityID, subsectionID, **kwargs):
+    subsection = {'Subsection' : {'@ID' : subsectionID}}
+    subsection['Subsection'] = self.set_fields(subsection['Subsection'], 'Subsection', **kwargs)
+
+    ''' find audit, site, facility '''
+    audit = self.find_audit(auditID)
+    site = self.find_site(audit, siteID)
+    facility = self.find_facility(site, facilityID)
+
+    if 'Subsections' not in facility['Facility']:
+      facility['Facility']['Subsections'] = []
+
+    facility['Facility']['Subsections'].append(subsection)
+
+  def add_side(self, auditID, siteID, facilityID, subsectionID, **kwargs):
+    side = {'Side' : {}}
+    side['Side'] = self.set_fields(side['Side'], 'Side', **kwargs)
+
+    ''' find audit, site, facility, subsection '''
+    audit = self.find_audit(auditID)
+    site = self.find_site(audit, siteID)
+    facility = self.find_facility(site, facilityID)
+    subsection = self.find_subsection(facility, subsectionID)
+
+    if 'Sides' not in subsection['Subsection']:
+      subsection['Subsection']['Sides'] = []
+
+    subsection['Subsection']['Sides'].append(side)  
+
+    print self.data['Audits']
+
+  def add_floor_area(self, addTo, auditID, siteID, facilityID=None, **kwargs):
+    ''' Floor Areas can be added to site or facility '''
+
+    # TODO: add to subsection, space
+
+    floor_area = {'FloorArea' : {}}
+    floor_area['FloorArea'] = self.set_fields(floor_area['FloorArea'], 'FloorArea', **kwargs)
+
+    audit = self.find_audit(auditID)
+    site = self.find_site(audit, siteID)
+    if addTo == 'Site':
+      if 'FloorAreas' not in site['Site']:
+        site['Site']['FloorAreas'] = []
+      site['Site']['FloorAreas'].append(floor_area)
+    elif addTo == 'Facility':
+      facility = self.find_facility(site, facilityID)
+      if 'FloorAreas' not in facility['Facility']:
+        facility['Facility']['FloorAreas'] = []
+      facility['Facility']['FloorAreas'].append(floor_area)
 
   def add_user_defined_field(self, addTo, auditID, **kwargs):
     ''' User-Defined Fields can be added to many elements '''
-    ''' audit, site, commercial facility, measure, report, emission, time_series, all_resource_total, scenario, lighting_system '''
+    ''' audit, site, facility, measure, report, emission, time_series, all_resource_total, scenario, lighting_system '''
     ''' in this case kwargs will have IDs in it '''
 
+    #TODO:  add to subsection, thermal zone, space
+
     udf = {'UserDefinedField' : {}}
-    udf = self.set_fields(udf, 'UserDefinedField', **kwargs)
+    udf['UserDefinedField'] = self.set_fields(udf['UserDefinedField'], 'UserDefinedField', **kwargs)
     print udf
 
     audit = self.find_audit(auditID)
@@ -175,13 +238,13 @@ class BuildingSync:
       if 'UserDefinedFields' not in site['Site']:
         site['Site']['UserDefinedFields'] = []
       site['Site']['UserDefinedFields'].append(udf)
-    elif addTo == 'CommercialFacility':
-      commercialFacilityID = self.find_field('commercialFacilityID', kwargs)
+    elif addTo == 'Facility':
+      facilityID = self.find_field('facilityID', kwargs)
       #TODO add error checking
-      commercial_facility = self.find_commercial_facility(self, site, commercialFacilityID)
-      if 'UserDefinedFields' not in commercial_facility['CommercialFacility']:
-        commercial_facility['CommercialFacility']['UserDefinedFields'] = []
-      commercial_facility['CommercialFacility']['UserDefinedFields'].append(udf)
+      facility = self.find_facility(self, site, facilityID)
+      if 'UserDefinedFields' not in facility['Facility']:
+        facility['Facility']['UserDefinedFields'] = []
+      facility['Facility']['UserDefinedFields'].append(udf)
     elif addTo == 'Measure':
       measureID = self.find_field('measureID', kwargs)
       #TODO add error checking
@@ -201,7 +264,6 @@ class BuildingSync:
       if 'UserDefinedFields' not in scenario['Scenario']:
         scenario['UserDefinedFields'] = []
       scenario['UserDefinedFields'].append(udf)  
-   
     elif addTo == 'TimeSeries':
       scenarioID = self.find_field('scenarioID', kwargs)
       timeSeriesID = self.find_field('timeSeriesID', kwargs)
@@ -211,7 +273,6 @@ class BuildingSync:
       if 'UserDefinedFields' not in timeseries['TimeSeries']:
         timeseries['UserDefinedFields'] = []
       timeseries['UserDefinedFields'].append(udf)
-        
     elif addTo == 'AllResourceTotal':
       scenarioID = self.find_field('scenarioID', kwargs)
       allResourceTotalID = self.find_field('allResourceTotalID', kwargs)
@@ -233,7 +294,6 @@ class BuildingSync:
       if 'UserDefinedFields' not in emission['Emission']:
         emission['UserDefinedFields'] = []
       emission['UserDefinedFields'].append(udf)  
-
     elif addTo == 'LightingSystem':
       lightingSystemID = self.find_field(lightingSystemID, kwargs)
       #TODO add error checking
@@ -247,7 +307,7 @@ class BuildingSync:
   def add_measure(self, auditID, measureID, **kwargs):
 
     new_measure = {'Measure' : {'@ID' : measureID}}
-    new_measure = self.set_fields(new_measure, 'Measure', kwargs)
+    new_measure['Measure'] = self.set_fields(new_measure['Measure'], 'Measure', kwargs)
 
     ''' find correct audit '''
     audit = self.find_audit(auditID)
@@ -257,7 +317,7 @@ class BuildingSync:
   def add_measure_savings_analysis(self, auditID, measureID, **kwargs):
     ''' add measure savings analysis to an existing measure '''
     measure_savings_analysis = {}
-    measure_savings_analysis = set_files(measure_savings_analysis, None, kwargs)
+    measure_savings_analysis = self.set_fields(measure_savings_analysis, 'MeasureSavingsAnalysis', kwargs)
 
     ''' find correct audit and measure '''
     audit = self.find_audit(auditID)
@@ -268,7 +328,7 @@ class BuildingSync:
   def add_report(self, auditID, **kwargs):
     
     report = {}
-    report = set_fields(report, None, kwargs)
+    report = self.set_fields(report, 'Report', kwargs)
 
     audit = self.find_audit(auditID)
     audit['Audit']['Report'] = report
@@ -277,7 +337,7 @@ class BuildingSync:
   def add_report_scenario(self, auditID, scenarioID, **kwargs):
     ''' add a scenario for report '''
     scenario = {'Scenario' : {'@ID' : scenarioID}}
-    scenario = self.set_fields(scenario, 'Scenario', kwargs)
+    scenario['Scenario'] = self.set_fields(scenario['Scenario'], 'Scenario', kwargs)
     
     audit = self.find_audit(auditID)
     if 'Scenarios' not in audit['Audit']['Report']:
@@ -289,7 +349,7 @@ class BuildingSync:
   def add_report_resource_use(self, auditID, scenarioID, resourceUseID, **kwargs):
 
     resource_use = {'ResourceUse' : {'@ID' : resourceUseID}}
-    resource_use = self.set_fields(resource_use, 'ResourceUse', kwargs)
+    resource_use['ResourceUse'] = self.set_fields(resource_use['ResourceUse'], 'ResourceUse', kwargs)
 
     audit = self.find_audit(auditID)
     scenario = self.find_scenario(audit, scenarioID)
@@ -302,7 +362,7 @@ class BuildingSync:
   def add_report_timeseries(self, auditID, scenarioID, timeseriesID, **kwargs):
 
     timeseries = {'TimeSeries' : {'@ID' : timeseriesID}} 
-    timeseries = self.set_fields(timeseries, 'TimeSeries', kwargs)
+    timeseries['TimeSeries'] = self.set_fields(timeseries['TimeSeries'], 'TimeSeries', kwargs)
 
     audit = self.find_audit(auditID)
     scenario = self.find_scenario(audit, scenarioID)
@@ -314,7 +374,7 @@ class BuildingSync:
   def add_report_all_resource_total(self, auditID, scenarioID, allResourceTotalID, **kwargs):
 
     allresourcetotal = {'AllResourceTotal' : {'@ID' : allResourceTotalID}} 
-    allresourcetotal = self.set_fields(allresourcetotal, 'AllResourceTotal', kwargs)
+    allresourcetotal['AllResourceTotal'] = self.set_fields(allresourcetotal['AllResourceTotal'], 'AllResourceTotal', kwargs)
 
     audit = self.find_audit(auditID)
     scenario = self.find_scenario(audit, scenarioID)
@@ -325,11 +385,11 @@ class BuildingSync:
 
   def add_lighting_system(self, auditID, lightingSystemID, **kwargs):
 
-    lighting_power = {'LightingPower': {'@ID' :lightingSystemID}}
-    lighting_power = self.set_fields(lighting_power, 'LightingPower', kwargs)
+    lighting_sys = {'LightingSystem': {'@ID' :lightingSystemID}}
+    lighting_sys['LightingSystem'] = self.set_fields(lighting_sys['LightingSystem'], 'LightingSystem', kwargs)
 
     audit = self.find_audit(auditID)
-    audit['Systems']['LightingSystems'].append(lighting_power)
+    audit['Systems']['LightingSystems'].append(lighting_sys)
 
 
 
@@ -380,5 +440,5 @@ class BuildingSync:
     errors = []
     return errors
 
-# do systems
+
 

@@ -1,4 +1,4 @@
-''' Could add this on: audit, site, commercial facility, measure, report, emission, time_series, all_resource_total, scenario, lighting_system '''
+''' Could add this on: audit, site, facility, subsection, thermalZone, space, measure, report, emission, time_series, all_resource_total, scenario, lighting_system '''
 def user_defined_field(): 
   fields = [
     'FieldName',
@@ -26,14 +26,14 @@ def site():
     'Ownership',
     'OwnershipStatus',
     'PrimaryContactID', #with IDref attr
-    'CommercialFacilities', #Each CommercialFacility (with ID attr) added via method
+    'Facilities', #Each Facility (with ID attr) added via method
     'UserDefinedFields' #Each UserDefinedField with FieldName, FieldValue
 
   ]
   return fields
 
 ''' Site SubElements '''
-def premises_identifier():  #Could add this on a site or in a commercial facility
+def premises_identifier():  #Could add this on a site or in a facility or space
   fields = [
     'IdentifierLabel',
     'IdentifierCustomName',
@@ -49,24 +49,27 @@ def address():
     'State',
     'PostalCode',
     'PostalCodePlus4',
-    'County'
+    'County',
+    'Country'
   ]
   return fields
 
-def floor_area(): #Could add this on a site or in a commercial facility
+def floor_area(): #Could add this to site, facility, subsection, space
   fields = [
     'FloorAreaType',
     'FloorAreaCustomName',
-    'FloorAreaValue' #with Source attr
+    'FloorAreaValue', #with Source attr
+    'Story'
   ]
   return fields
 
-def commercial_facility():
+def facility():
   fields = [
     'PremisesName',
     'PremisesNotes',
     'PremisesIdentifiers', #Add via method
     'OccupancyClassification',
+    'Classification',
     'OccupancyLevels', #Add via method
     'SpatialUnits', #Add via method
     'Ownership',
@@ -77,6 +80,8 @@ def commercial_facility():
     'FederalBuilding', #dict with Agency, DepartmentRegion, 
     'PortfolioManager', #dict with PMBenchmarkDate, BuildingProfileStatus, FederalSustainabilityChecklistCompletionPercentage-with Source attr,
     'NumberOfBusinesses', #with Source attr
+    'FloorsAboveGrade',
+    'FloorsBelowGrade',
     'FloorAreas', #Add via method
     'AspectRatio', #with Source attr
     'Perimeter', #with Source attr
@@ -97,7 +102,7 @@ def commercial_facility():
   ]
   return fields  
 
-def occupancy_level():
+def occupancy_level(): #Can add this to subsection, facility, space
   fields = [
     'OccupantType', 
     'OccupantQuantityType', 
@@ -111,6 +116,110 @@ def spatial_unit():
     'NumberOfUnits', #with Source attr
     'UnitDensity' #with Source attr
   ]  
+  return fields
+
+def subsection():
+  fields = [
+    'PremisesName',
+    'PremisesNotes',
+    'PremisesIdentifiers', #Add via method
+    'OccupancyClassification',
+    'OccupancyLevels', #Add via method
+    'PrimaryContactID', #with IDref attr
+    'YearOfConstruction',
+    'FootprintShape',
+    'FloorAreas', #Add via method
+    'ThermalZoneLayout',
+    'PerimeterZoneDepth', #with Source attr
+    'SideA1Orientation', #with Source attr
+    'Sides', #Add via method
+    'Story',
+    'RoofID', #Add via method (with IDref)
+    'FoundationID', #Add via method (with IDref)
+    'XOffset', #with Source attr
+    'YOffset', #with Source attr
+    'ZOffset', #with Source attr
+    'FloorsAboveGrade',
+    'FloorsBelowGrade',
+    'FloorsPartiallyBelowGrade',
+    'FloorToFloorHeight',
+    'FloorToCeilingHeight',
+    'UserDefinedFields', #Add via method
+    'ThermalZones' #Add via method
+
+  ]
+  return fields  
+
+def side():
+  fields = [
+    'SideNumber',
+    'SideLength', #with Source attr
+    'WallID', #with IDref attr; WallArea elem (with Source attr)
+    'WindowID', #with IDref attr; FenestrationArea elem (with Source attr); 
+                #WindowToWallRatio elem (with Source attr); PercentOfWindowAreaShaded elem (with Source attr)
+    'DoorID', #with IDref attr; FenestrationArea elem (with Source attr)
+    'ThermalZoneID', #with IDref attr
+    'SpaceID', #with IDref attr
+  ]
+  return fields
+
+def roofID(): 
+  #with IDref attr
+  fields = [
+    'RoofArea', #with Source attr
+    'RoofInsulatedArea', #with Source attr
+    'SkylightID', #with IDref, PercentSkylightArea (with Source attr)
+    'ThermalZoneID', #with IDref
+    'SpaceID' #with IDref
+
+  ]
+  return fields
+
+def foundationID():  
+  #with IDref attr
+  fields = [
+    'FoundationArea' #with Source attr
+    'ThermalZoneID', #with IDref
+    'SpaceID', #with IDref
+  ]
+  return fields
+
+def thermalZone(): 
+  #with ID attr
+  fields = [
+    'PremisesName',
+    'DeliveryID', #with IDref attr
+    'HVACScheduleID', #with IDref attr
+    'SetpointTemperatureHeating', #with Source attr
+    'SetbackTemperatureHeating', #with Source attr
+    'HeatLowered', 
+    'SetpointTemperatureCooling', #with Source attr
+    'SetupTemperatureCooling', #with Source attr
+    'ACAdjusted', 
+    'Spaces', #Add via method
+    'UserDefinedFields' #Add via method
+  ]
+  return fields
+
+def space():
+  #with ID attr 
+  fields = [
+    'PremisesName',
+    'PremisesNotes',
+    'PremisesIdentifiers', #Add via method
+    'OccupancyClassification',
+    'OccupancyLevels', #Add via method
+    'OccupancyScheduleID', #with IDref attr
+    'OccupantsActivityLevel',
+    'DaylitFloorArea',
+    'DaylightingIlluminanceSetpoint', #with Source attr
+    'PrimaryContactID', #with IDref
+    'FloorAreas', #Add via method
+    'PercentageOfCommonSpace', #with Source attr
+    'ConditionedVolume', #with Source attr
+    'UserDefinedFields'
+
+  ]
   return fields
 
 ''' Measure '''

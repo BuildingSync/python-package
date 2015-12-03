@@ -5,6 +5,36 @@ bs = BuildingSync()
 bs.add_audit('audit_id_1')
 kwargs = {'FieldName': 'ApiVersion', 'FieldValue': '1.0 draft'}
 bs.add_user_defined_field('Audit', 'audit_id_1', **kwargs)
+
+bs.add_site('audit_id_1', 'site_id_1')
+kwargs = {'City' : 'Anchorage', 'State' : 'AK', 'County': 'Anchorage'}
+bs.add_address('audit_id_1', 'site_id_1', **kwargs)
+
+kwargs = {'Classification': 'Residential', 'OccupancyClassification' : 'Single-Family', 'FloorsAboveGrade' : 3, 'FloorsBelowGrade' : 1}
+bs.add_facility('audit_id_1', 'site_id_1', 'facility_id_1', **kwargs)
+
+''' add floor area (to facility) '''
+kwargs1 = {'FloorAreaType' : 'Conditioned', 'FloorAreaValue' : 100, 'Story' : 1}
+kwargs2 = {'FloorAreaType' : 'Conditioned', 'FloorAreaValue' : 100, 'Story' : 1}
+kwargs3 = {'FloorAreaType' : 'Unconditioned', 'FloorAreaValue' : 100, 'Story' : 2}
+kwargs4 = {'FloorAreaType' : 'Conditioned', 'FloorAreaValue' : 100, 'Story' : 2}
+bs.add_floor_area('Facility', 'audit_id_1', 'site_id_1', 'facility_id_1', **kwargs1)
+bs.add_floor_area('Facility', 'audit_id_1', 'site_id_1', 'facility_id_1', **kwargs2)
+bs.add_floor_area('Facility', 'audit_id_1', 'site_id_1', 'facility_id_1', **kwargs3)
+bs.add_floor_area('Facility', 'audit_id_1', 'site_id_1', 'facility_id_1', **kwargs4)
+
+''' add Exterior Wall Areas '''
+kwargs = {'Story' : 1}
+bs.add_subsection('audit_id_1', 'site_id_1', 'facility_id_1', 'subsection_id_1', **kwargs)
+kwargs1 = {'WallID': {'@IDref': 'wall_id_1', 'WallArea' : 100}}
+kwargs2 = {'WallID': {'@IDref': 'wall_id_2', 'WallArea' : 200}}
+
+bs.add_side('audit_id_1', 'site_id_1', 'facility_id_1', 'subsection_id_1', **kwargs1)
+bs.add_side('audit_id_1', 'site_id_1', 'facility_id_1', 'subsection_id_1', **kwargs2)
+bs.add_side('audit_id_1', 'site_id_1', 'facility_id_1', 'subsection_id_1', **kwargs1)
+bs.add_side('audit_id_1', 'site_id_1', 'facility_id_1', 'subsection_id_1', **kwargs2)
+
+
 bs.export_json('test.json')
 
 
